@@ -75,4 +75,4 @@ jobs:
           CELERY_BROKER_URL: redis://localhost:6379/0
           CELERY_RESULT_BACKEND: redis://localhost:6379/0
         run: |
-          pytest -v
+          pytest -v --cov=task_api --cov-report=term-missing --cov-report=xml
