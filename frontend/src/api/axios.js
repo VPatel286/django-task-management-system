@@ -2,7 +2,11 @@ import axios from "axios";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "http://127.0.0.1:8000/api/v1";
+  "http://127.0.0.1:8000/api";
+
+const TOKEN_OBTAIN_URL =
+  import.meta.env.VITE_TOKEN_OBTAIN_URL ||
+  "http://127.0.0.1:8000/api/token/";
 
 const TOKEN_REFRESH_URL =
   import.meta.env.VITE_TOKEN_REFRESH_URL ||
@@ -40,7 +44,8 @@ api.interceptors.response.use(
     ) {
       originalRequest._retry = true;
 
-      const refreshToken = localStorage.getItem("refresh_token");
+      const refreshToken =
+        localStorage.getItem("refresh_token");
 
       if (!refreshToken) {
         return Promise.reject(error);
@@ -78,7 +83,7 @@ api.interceptors.response.use(
 );
 
 export const tokenApi = axios.create({
-  baseURL: import.meta.env.VITE_TOKEN_OBTAIN_URL,
+  baseURL: TOKEN_OBTAIN_URL,
   headers: {
     "Content-Type": "application/json",
   },
