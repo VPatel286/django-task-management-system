@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api, { tokenApi } from "./api/axios";
 import TaskForm from "./TaskForm";
 import TaskList from "./TaskList";
@@ -6,7 +6,6 @@ import Login from "./Login";
 import CategoryList from "./CategoryList";
 import Register from "./Register";
 import "./App.css";
-
 
 function App() {
   const [username, setUsername] = useState("");
@@ -29,9 +28,11 @@ function App() {
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [taskError, setTaskError] = useState("");
   const [taskSuccess, setTaskSuccess] = useState("");
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [ordering, setOrdering] = useState("-created_at");
+
   const [categories, setCategories] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [tags, setTags] = useState([]);
@@ -47,81 +48,89 @@ function App() {
   const [nextPage, setNextPage] = useState(null);
   const [previousPage, setPreviousPage] = useState(null);
 
-  const loadTasks = async (url = null) => {
-    setIsLoadingTasks(true);
+  const loadTasks = useCallback(
+    async (url = null) => {
+      setIsLoadingTasks(true);
+      setTaskError("");
+
+      try {
+        if (!url) {
+          const params = new URLSearchParams();
+
+          if (search) {
+            params.append("search", search);
+          }
+
+          if (statusFilter) {
+            params.append("status", statusFilter);
+          }
+
+          if (ordering) {
+            params.append("ordering", ordering);
+          }
+
+          url = `/tasks/?${params.toString()}`;
+        }
+
+        const response = await api.get(url);
+
+        setTasks(response.data.results);
+        setNextPage(response.data.next);
+        setPreviousPage(response.data.previous);
+      } catch (error) {
+        console.error(
+          "Tasks error:",
+          error.response?.data || error
+        );
+
+        setTaskError(
+          "Unable to load tasks. Please try again."
+        );
+      } finally {
+        setIsLoadingTasks(false);
+      }
+    },
+    [search, statusFilter, ordering]
+  );
+
+  const loadDashboardData = async () => {
     setTaskError("");
 
     try {
-      if (!url) {
-        const params = new URLSearchParams();
+      const [
+        tasksResponse,
+        categoriesResponse,
+        tagsResponse,
+      ] = await Promise.all([
+        api.get("/tasks/?ordering=-created_at"),
+        api.get("/categories/"),
+        api.get("/tags/"),
+      ]);
 
-        if (search) {
-          params.append("search", search);
-        }
+      setTasks(tasksResponse.data.results);
+      setNextPage(tasksResponse.data.next);
+      setPreviousPage(tasksResponse.data.previous);
 
-        if (statusFilter) {
-          params.append("status", statusFilter);
-        }
+      setCategories(
+        categoriesResponse.data.results ||
+          categoriesResponse.data
+      );
 
-        if (ordering) {
-          params.append("ordering", ordering);
-        }
-
-        url = `/tasks/?${params.toString()}`;
-      }
-
-      const response = await api.get(url);
-
-      setTasks(response.data.results);
-      setNextPage(response.data.next);
-      setPreviousPage(response.data.previous);
+      setTags(
+        tagsResponse.data.results ||
+          tagsResponse.data
+      );
     } catch (error) {
       console.error(
-        "Tasks error:",
+        "Dashboard loading error:",
         error.response?.data || error
       );
 
       setTaskError(
-        "Unable to load tasks. Please try again."
-      );
-    } finally {
-      setIsLoadingTasks(false);
-    }
-  };
-
-  const loadCategories = async () => {
-    try {
-      const response = await api.get("/categories/");
-
-      setCategories(response.data.results || response.data);
-    } catch (error) {
-      console.error(
-        "Categories error:",
-        error.response?.data || error
+        "Unable to load dashboard data. Please try again."
       );
     }
   };
-
-  const loadTags = async () => {
-    try {
-      const response = await api.get("/tags/");
-
-      setTags(response.data.results || response.data);
-    } catch (error) {
-      console.error(
-        "Tags error:",
-        error.response?.data || error
-      );
-    }
-  };
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      loadTasks();
-      loadCategories();
-      loadTags();
-    }
-  }, [isLoggedIn]);
 
   useEffect(() => {
     if (!taskSuccess) {
@@ -135,7 +144,6 @@ function App() {
     return () => clearTimeout(timer);
   }, [taskSuccess]);
 
-
   const handleLogin = async (event) => {
     event.preventDefault();
 
@@ -143,13 +151,10 @@ function App() {
     setIsLoggingIn(true);
 
     try {
-      const response = await tokenApi.post(
-        "",
-        {
-          username,
-          password,
-        }
-      );
+      const response = await tokenApi.post("", {
+        username,
+        password,
+      });
 
       localStorage.setItem(
         "access_token",
@@ -161,6 +166,8 @@ function App() {
         response.data.refresh
       );
 
+      await loadDashboardData();
+
       setIsLoggedIn(true);
       setPassword("");
     } catch (error) {
@@ -168,7 +175,9 @@ function App() {
         error.response &&
         error.response.status === 401
       ) {
-        setLoginError("Invalid username or password.");
+        setLoginError(
+          "Invalid username or password."
+        );
       } else {
         setLoginError(
           "Unable to login. Please try again."
@@ -187,13 +196,10 @@ function App() {
     setIsRegistering(true);
 
     try {
-      await api.post(
-        "/register/",
-        {
-          username,
-          password,
-        }
-      );
+      await api.post("/register/", {
+        username,
+        password,
+      });
 
       setShowRegister(false);
       setPassword("");
@@ -247,7 +253,9 @@ function App() {
           }
         );
 
-        setTaskSuccess("Task updated successfully.");
+        setTaskSuccess(
+          "Task updated successfully."
+        );
       } else {
         await api.post("/tasks/", {
           title,
@@ -259,7 +267,9 @@ function App() {
           tags: selectedTags,
         });
 
-        setTaskSuccess("Task created successfully.");
+        setTaskSuccess(
+          "Task created successfully."
+        );
       }
 
       setTitle("");
@@ -275,6 +285,10 @@ function App() {
       console.error(
         "Task save error:",
         error.response?.data || error
+      );
+
+      setTaskError(
+        "Unable to save task. Please try again."
       );
     } finally {
       setIsSavingTask(false);
@@ -295,8 +309,8 @@ function App() {
     setSelectedTags((currentTags) =>
       currentTags.includes(tagId)
         ? currentTags.filter(
-          (id) => id !== tagId
-        )
+            (id) => id !== tagId
+          )
         : [...currentTags, tagId]
     );
   };
@@ -313,7 +327,9 @@ function App() {
     try {
       await api.delete(`/tasks/${taskId}/`);
 
-      setTaskSuccess("Task deleted successfully.");
+      setTaskSuccess(
+        "Task deleted successfully."
+      );
 
       console.log(
         "Task deleted successfully"
@@ -325,6 +341,10 @@ function App() {
         "Delete task error:",
         error.response?.data || error
       );
+
+      setTaskError(
+        "Unable to delete task. Please try again."
+      );
     }
   };
 
@@ -334,6 +354,8 @@ function App() {
 
     setIsLoggedIn(false);
     setTasks([]);
+    setCategories([]);
+    setTags([]);
   };
 
   if (!isLoggedIn) {
@@ -373,6 +395,7 @@ function App() {
         <div className="dashboard-header">
           <div>
             <h1>Task Dashboard</h1>
+
             <p className="welcome-text">
               Welcome, <strong>{username}</strong>
             </p>
@@ -394,6 +417,7 @@ function App() {
               {taskSuccess}
             </p>
           )}
+
           <TaskForm
             title={title}
             setTitle={setTitle}
@@ -429,7 +453,9 @@ function App() {
               type="text"
               placeholder="Search tasks..."
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
             />
 
             <select
@@ -438,11 +464,25 @@ function App() {
                 setStatusFilter(event.target.value)
               }
             >
-              <option value="">All Statuses</option>
-              <option value="TODO">To Do</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
+              <option value="">
+                All Statuses
+              </option>
+
+              <option value="TODO">
+                To Do
+              </option>
+
+              <option value="IN_PROGRESS">
+                In Progress
+              </option>
+
+              <option value="COMPLETED">
+                Completed
+              </option>
+
+              <option value="CANCELLED">
+                Cancelled
+              </option>
             </select>
 
             <select
@@ -451,9 +491,17 @@ function App() {
                 setOrdering(event.target.value)
               }
             >
-              <option value="-created_at">Newest First</option>
-              <option value="created_at">Oldest First</option>
-              <option value="title">Title A-Z</option>
+              <option value="-created_at">
+                Newest First
+              </option>
+
+              <option value="created_at">
+                Oldest First
+              </option>
+
+              <option value="title">
+                Title A-Z
+              </option>
             </select>
 
             <button
@@ -461,7 +509,9 @@ function App() {
               onClick={() => loadTasks()}
               disabled={isLoadingTasks}
             >
-              {isLoadingTasks ? "Loading..." : "Apply Filters"}
+              {isLoadingTasks
+                ? "Loading..."
+                : "Apply Filters"}
             </button>
           </div>
         </div>
