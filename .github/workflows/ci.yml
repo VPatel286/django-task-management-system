@@ -5,11 +5,12 @@ on:
     branches:
       - main
       - master
+      - feature/project-completion
   pull_request:
     branches:
       - main
       - master
-
+      
 jobs:
   test:
     runs-on: ubuntu-latest
