@@ -35,16 +35,19 @@ SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
-SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_SSL_REDIRECT = os.getenv(
+    "SECURE_SSL_REDIRECT",
+    "True" if not DEBUG else "False"
+).lower() == "true"
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 SECURE_REFERRER_POLICY = "same-origin"
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-]
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1"
+).split(",")
 
 # Application definition
 
@@ -151,18 +154,21 @@ STATIC_URL = 'static/'
 
 MAILERS = {
     "default": {
-        "BACKEND": (
-            "django.core.mail.backends.console.EmailBackend"
-            if DEBUG
-            else "django.core.mail.backends.smtp.EmailBackend"
-        ),
-        "HOST": os.getenv("EMAIL_HOST", ""),
-        "PORT": int(os.getenv("EMAIL_PORT", "587")),
-        "USERNAME": os.getenv("EMAIL_HOST_USER", ""),
-        "PASSWORD": os.getenv("EMAIL_HOST_PASSWORD", ""),
-        "USE_TLS": os.getenv("EMAIL_USE_TLS", "True").lower() == "true",
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": os.getenv("EMAIL_HOST", "mailpit"),
+            "port": int(os.getenv("EMAIL_PORT", "1025")),
+            "username": os.getenv("EMAIL_HOST_USER", ""),
+            "password": os.getenv("EMAIL_HOST_PASSWORD", ""),
+            "use_tls": os.getenv("EMAIL_USE_TLS", "False").lower() == "true",
+        },
     },
 }
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    "noreply@taskapi.local",
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -232,7 +238,12 @@ SPECTACULAR_SETTINGS = {
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173",
+    ).split(",")
+    if origin.strip()
 ]
 
 

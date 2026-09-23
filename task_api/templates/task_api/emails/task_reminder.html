@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Task Reminder</title>
+</head>
+
+<body style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 30px;">
+
+    <div style="
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+    ">
+
+        <h2 style="margin-top: 0;">
+            Task Reminder
+        </h2>
+
+        <p>
+            Hello {{ user_name }},
+        </p>
+
+        <p>
+            This is a reminder that you have an incomplete task that may need your attention.
+        </p>
+
+        <hr>
+
+        <h3>Task Details</h3>
+
+        <p>
+            <strong>Task ID:</strong> {{ task_id }}
+        </p>
+
+        <p>
+            <strong>Title:</strong> {{ task_title }}
+        </p>
+
+        <p>
+            <strong>Description:</strong><br>
+            {{ task_description|default:"No description provided." }}
+        </p>
+
+        <p>
+            <strong>Status:</strong> {{ task_status }}
+        </p>
+
+        <p>
+            <strong>Completed:</strong>
+            {% if completed %}
+                Yes
+            {% else %}
+                No
+            {% endif %}
+        </p>
+
+        <hr>
+
+        <p style="color: #666; font-size: 13px;">
+            This is an automated reminder from Task API.
+        </p>
+
+    </div>
+
+</body>
+</html>

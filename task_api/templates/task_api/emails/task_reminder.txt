@@ -1,0 +1,16 @@
+Task Reminder
+
+Hello {{ user_name }},
+
+This is a reminder that you have an incomplete task that may need your attention.
+
+Task Details
+------------
+
+Task ID: {{ task_id }}
+Title: {{ task_title }}
+Description: {{ task_description|default:"No description provided." }}
+Status: {{ task_status }}
+Completed: {% if completed %}Yes{% else %}No{% endif %}
+
+This is an automated reminder from Task API.

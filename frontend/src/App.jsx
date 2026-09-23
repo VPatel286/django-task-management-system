@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import api from "./api/axios";
+import api, { tokenApi } from "./api/axios";
 import TaskForm from "./TaskForm";
 import TaskList from "./TaskList";
 import Login from "./Login";
 import CategoryList from "./CategoryList";
 import Register from "./Register";
 import "./App.css";
+
 
 function App() {
   const [username, setUsername] = useState("");
@@ -142,8 +143,8 @@ function App() {
     setIsLoggingIn(true);
 
     try {
-      const response = await api.post(
-        "http://127.0.0.1:8000/api/token/",
+      const response = await tokenApi.post(
+        "",
         {
           username,
           password,
@@ -187,7 +188,7 @@ function App() {
 
     try {
       await api.post(
-        "http://127.0.0.1:8000/api/v1/register/",
+        "/register/",
         {
           username,
           password,

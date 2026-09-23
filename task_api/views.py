@@ -19,7 +19,7 @@ from .serializers import (
     UserSerializer,
     ChangePasswordSerializer,
 )
-from .tasks import process_task
+from .tasks import process_task, send_task_email
 from .services import TaskService
 from .permissions import IsTaskOwner
 
@@ -82,6 +82,13 @@ class TaskListCreateView(generics.ListCreateAPIView):
         transaction.on_commit(
             lambda: process_task.delay(task.id)
         )
+
+        transaction.on_commit(
+            lambda: send_task_email.delay(
+                self.request.user.email,
+                task.id
+            )
+            )
 
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):

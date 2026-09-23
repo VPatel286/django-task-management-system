@@ -1,7 +1,15 @@
 import axios from "axios";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://127.0.0.1:8000/api/v1";
+
+const TOKEN_REFRESH_URL =
+  import.meta.env.VITE_TOKEN_REFRESH_URL ||
+  "http://127.0.0.1:8000/api/token/refresh/";
+
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/v1",
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -40,7 +48,7 @@ api.interceptors.response.use(
 
       try {
         const response = await axios.post(
-          "http://127.0.0.1:8000/api/token/refresh/",
+          TOKEN_REFRESH_URL,
           {
             refresh: refreshToken,
           }
@@ -68,5 +76,12 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const tokenApi = axios.create({
+  baseURL: import.meta.env.VITE_TOKEN_OBTAIN_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 export default api;

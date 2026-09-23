@@ -1,0 +1,16 @@
+Task Created Successfully
+
+Hello {{ user_name }},
+
+Your task has been successfully created.
+
+Task Details
+------------
+
+Task ID: {{ task_id }}
+Title: {{ task_title }}
+Description: {{ task_description|default:"No description provided." }}
+Status: {{ task_status }}
+Completed: {% if completed %}Yes{% else %}No{% endif %}
+
+This is an automated notification from Task API.

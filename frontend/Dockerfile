@@ -9,6 +9,9 @@ RUN npm ci
 
 COPY . .
 
+# Use local environment variables for Docker Compose
+RUN cp .env .env.production
+
 RUN npm run build
 
 
