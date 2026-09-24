@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-beat
+  namespace: task-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-beat
+  template:
+    metadata:
+      labels:
+        app: celery-beat
+    spec:
+      containers:
+        - name: celery-beat
+          image: 844171074142.dkr.ecr.us-east-2.amazonaws.com/task-management-backend:latest
+          imagePullPolicy: Always
+
+          command:
+            - celery
+            - -A
+            - config
+            - beat
+            - --loglevel=info
+
+          env:
+            - name: DEBUG
+              value: "False"
+
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-app-secret
+                  key: DJANGO_SECRET_KEY
+
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-db-secret
+                  key: DB_NAME
+
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-db-secret
+                  key: DB_USER
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-db-secret
+                  key: DB_PASSWORD
+
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-db-secret
+                  key: DB_HOST
+
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-db-secret
+                  key: DB_PORT
+
+            - name: CELERY_BROKER_URL
+              value: "redis://redis:6379/0"
+
+            - name: CELERY_RESULT_BACKEND
+              value: "redis://redis:6379/0"
+
+            - name: EMAIL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-email-secret
+                  key: EMAIL_HOST
+
+            - name: EMAIL_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-email-secret
+                  key: EMAIL_PORT
+
+            - name: EMAIL_HOST_USER
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-email-secret
+                  key: EMAIL_HOST_USER
+
+            - name: EMAIL_HOST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-email-secret
+                  key: EMAIL_HOST_PASSWORD
+
+            - name: EMAIL_USE_TLS
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-email-secret
+                  key: EMAIL_USE_TLS
+
+            - name: DEFAULT_FROM_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: task-api-email-secret
+                  key: DEFAULT_FROM_EMAIL
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
