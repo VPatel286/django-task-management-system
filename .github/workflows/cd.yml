@@ -1,0 +1,129 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - feature/project-completion
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-2
+  EKS_CLUSTER_NAME: task-management-eks
+  ECR_REGISTRY: 844171074142.dkr.ecr.us-east-2.amazonaws.com
+  BACKEND_IMAGE: task-management-backend
+  FRONTEND_IMAGE: task-management-frontend
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build-and-deploy:
+    name: Build, Push and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::844171074142:role/GitHubActionsTaskManagement
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        run: |
+          docker build \
+            -t $ECR_REGISTRY/$BACKEND_IMAGE:$IMAGE_TAG \
+            .
+
+          docker push \
+            $ECR_REGISTRY/$BACKEND_IMAGE:$IMAGE_TAG
+
+      - name: Configure production frontend API URL
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: |
+          if [ -z "$VITE_API_BASE_URL" ]; then
+            echo "VITE_API_BASE_URL repository variable is not configured."
+            exit 1
+          fi
+
+          sed -i "s|^VITE_API_BASE_URL=.*|VITE_API_BASE_URL=$VITE_API_BASE_URL|" frontend/.env
+
+      - name: Build and push frontend image
+        run: |
+          docker build \
+            -t $ECR_REGISTRY/$FRONTEND_IMAGE:$IMAGE_TAG \
+            ./frontend
+
+          docker push \
+            $ECR_REGISTRY/$FRONTEND_IMAGE:$IMAGE_TAG
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $EKS_CLUSTER_NAME
+
+      - name: Verify Kubernetes access
+        run: |
+          kubectl get namespace task-management
+
+      - name: Deploy backend
+        run: |
+          kubectl -n task-management set image deployment/task-api \
+            django=$ECR_REGISTRY/$BACKEND_IMAGE:$IMAGE_TAG
+
+      - name: Deploy Celery worker
+        run: |
+          kubectl -n task-management set image deployment/celery \
+            celery=$ECR_REGISTRY/$BACKEND_IMAGE:$IMAGE_TAG
+
+      - name: Deploy Celery Beat
+        run: |
+          kubectl -n task-management set image deployment/celery-beat \
+            celery-beat=$ECR_REGISTRY/$BACKEND_IMAGE:$IMAGE_TAG
+
+      - name: Deploy frontend
+        run: |
+          kubectl -n task-management set image deployment/frontend \
+            frontend=$ECR_REGISTRY/$FRONTEND_IMAGE:$IMAGE_TAG
+
+      - name: Wait for backend rollout
+        run: |
+          kubectl -n task-management rollout status \
+            deployment/task-api \
+            --timeout=180s
+
+      - name: Wait for Celery rollout
+        run: |
+          kubectl -n task-management rollout status \
+            deployment/celery \
+            --timeout=180s
+
+      - name: Wait for Celery Beat rollout
+        run: |
+          kubectl -n task-management rollout status \
+            deployment/celery-beat \
+            --timeout=180s
+
+      - name: Wait for frontend rollout
+        run: |
+          kubectl -n task-management rollout status \
+            deployment/frontend \
+            --timeout=180s
+
+      - name: Deployment summary
+        run: |
+          echo "Deployment completed successfully."
+          echo "Commit: $GITHUB_SHA"
+
+          kubectl -n task-management get pods
