@@ -34,8 +34,8 @@ class TagSerializer(serializers.ModelSerializer):
             "id",
             "created_at",
         ]
-        
-        
+
+
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task

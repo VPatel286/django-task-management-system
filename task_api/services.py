@@ -35,5 +35,5 @@ class TaskService:
     @staticmethod
     def delete_task(*, task):
         task.delete()
-        
-       
+
+
